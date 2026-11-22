@@ -30,7 +30,7 @@ def q(url: str, index: int):
     return query(url, QUERY_LINES[index])
 
 
-def test_script_executes_and_matches_the_neo4j_graph_size(loaded):
+def test_script_executes_and_produces_the_expected_graph_size(loaded):
     assert query(loaded, "g.V().count()") == [42]
     assert query(loaded, "g.E().count()") == [62]
 

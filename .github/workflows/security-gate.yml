@@ -116,7 +116,7 @@ jobs:
       - name: Integration tests (loader + Cypher queries against real Neo4j)
         env:
           REQUIRE_INTEGRATION: "1"
-        run: pytest -m integration -k neo4j
+        run: pytest -m integration tests/integration/test_neo4j.py
 
   # --------------------------------------------------------------------------- negative controls
   gate-self-test:
