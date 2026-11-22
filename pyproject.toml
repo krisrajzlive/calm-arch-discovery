@@ -22,12 +22,14 @@ dev = ["pytest>=8", "ruff>=0.5"]
 
 [project.scripts]
 calm-discover = "scanner.calm_builder:main"
+calm-intent = "intent.builder:main"
 calm-gate = "pipeline.calm_validator:main"
+calm-conformance = "pipeline.conformance:main"
 calm-load-neo4j = "graph.neo4j_loader:main"
 calm-export-gremlin = "graph.gremlin_exporter:main"
 
 [tool.setuptools.packages.find]
-include = ["scanner*", "graph*", "pipeline*"]
+include = ["scanner*", "graph*", "pipeline*", "intent*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

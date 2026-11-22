@@ -5,3 +5,4 @@
 /services/storefront-web/       @payments-platform/web-experience
 /k8s/orders-db.yaml             @payments-platform/data-platform
 /k8s/cache.yaml                 @payments-platform/data-platform
+/docs/architecture/             @payments-platform/architects

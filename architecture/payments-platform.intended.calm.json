@@ -1,0 +1,452 @@
+{
+  "$schema": "https://calm.finos.org/release/1.3/meta/calm.json",
+  "metadata": {
+    "name": "payments-platform",
+    "kind": "intended",
+    "description": "Architecture approved in 'fixtures/sample-repo/docs/architecture/architecture.md'.",
+    "environment": "production",
+    "source": "fixtures/sample-repo/docs/architecture/architecture.md",
+    "generated-by": {
+      "tool": "calm-arch-discovery",
+      "version": "0.1.0"
+    },
+    "calm-version": "1.3",
+    "waivers": [
+      {
+        "rule": "encryption-violation",
+        "subject": "orders-api -> cache",
+        "reason": "Redis TLS rollout is tracked in PLAT-412",
+        "owner": "@payments-platform/data-platform",
+        "expires": "2029-12-31"
+      },
+      {
+        "rule": "control-not-evidenced",
+        "subject": "notification-worker/container-hardening",
+        "reason": "Worker image still runs as root until PLAT-377",
+        "owner": "@payments-platform/messaging-guild",
+        "expires": "2029-12-31"
+      },
+      {
+        "rule": "control-not-evidenced",
+        "subject": "cache/network-segmentation",
+        "reason": "NetworkPolicy for the cache lands with PLAT-415",
+        "owner": "@payments-platform/data-platform",
+        "expires": "2029-12-31"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "unique-id": "payments-platform",
+      "node-type": "system",
+      "name": "payments-platform",
+      "description": "System 'payments-platform' as approved in the architecture document.",
+      "controls": {
+        "ownership-governance": {
+          "description": "payments-platform must have an accountable owner declared in CODEOWNERS.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/ownership-governance.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "@payments-platform/architects",
+        "environment": "all"
+      }
+    },
+    {
+      "unique-id": "public-gateway",
+      "node-type": "service",
+      "name": "public-gateway",
+      "description": "Internet-facing ingress; terminates TLS",
+      "controls": {
+        "encryption-in-transit": {
+          "description": "All inbound connections to public-gateway must use TLS.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/encryption-in-transit.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "platform-edge",
+        "environment": "production",
+        "role": "ingress"
+      }
+    },
+    {
+      "unique-id": "storefront-web",
+      "node-type": "webclient",
+      "name": "storefront-web",
+      "description": "Browser storefront served behind the gateway",
+      "controls": {
+        "container-hardening": {
+          "description": "storefront-web must run as non-root without privilege escalation.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/container-hardening.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "web-experience",
+        "environment": "production"
+      }
+    },
+    {
+      "unique-id": "notification-worker",
+      "node-type": "service",
+      "name": "notification-worker",
+      "description": "Customer e-mail and SMS notifications",
+      "controls": {
+        "container-hardening": {
+          "description": "notification-worker must run as non-root without privilege escalation.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/container-hardening.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "messaging-guild",
+        "environment": "production"
+      }
+    },
+    {
+      "unique-id": "orders-api",
+      "node-type": "service",
+      "name": "orders-api",
+      "description": "Order lifecycle and checkout orchestration",
+      "controls": {
+        "auth-required": {
+          "description": "orders-api must only accept authenticated callers.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/auth-required.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        },
+        "container-hardening": {
+          "description": "orders-api must run as non-root without privilege escalation.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/container-hardening.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "orders-squad",
+        "environment": "production"
+      }
+    },
+    {
+      "unique-id": "payments-service",
+      "node-type": "service",
+      "name": "payments-service",
+      "description": "Card authorisation and settlement",
+      "controls": {
+        "auth-required": {
+          "description": "payments-service must only accept authenticated callers.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/auth-required.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        },
+        "container-hardening": {
+          "description": "payments-service must run as non-root without privilege escalation.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/container-hardening.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        },
+        "network-segmentation": {
+          "description": "Traffic to payments-service must be restricted by network policy.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/network-segmentation.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "payments-core",
+        "environment": "production"
+      }
+    },
+    {
+      "unique-id": "cache",
+      "node-type": "database",
+      "name": "cache",
+      "description": "Session and catalogue cache",
+      "controls": {
+        "network-segmentation": {
+          "description": "Traffic to cache must be restricted by network policy.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/network-segmentation.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "data-platform",
+        "environment": "production"
+      }
+    },
+    {
+      "unique-id": "orders-db",
+      "node-type": "database",
+      "name": "orders-db",
+      "description": "System of record for orders",
+      "controls": {
+        "auth-required": {
+          "description": "orders-db must only accept authenticated callers.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/auth-required.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        },
+        "encryption-at-rest": {
+          "description": "Persistent storage for orders-db must be encrypted.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/encryption-at-rest.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        },
+        "network-segmentation": {
+          "description": "Traffic to orders-db must be restricted by network policy.",
+          "requirements": [
+            {
+              "requirement-url": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/network-segmentation.requirement.json",
+              "config": {
+                "status": "required"
+              }
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "owner": "data-platform",
+        "environment": "production"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "unique-id": "public-gateway-to-storefront-web",
+      "description": "Serve the single-page app",
+      "protocol": "HTTP",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "public-gateway"
+          },
+          "destination": {
+            "node": "storefront-web"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "not-required",
+        "purpose": "Serve the single-page app"
+      }
+    },
+    {
+      "unique-id": "public-gateway-to-orders-api",
+      "description": "Public order API",
+      "protocol": "HTTP",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "public-gateway"
+          },
+          "destination": {
+            "node": "orders-api"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "not-required",
+        "purpose": "Public order API"
+      }
+    },
+    {
+      "unique-id": "storefront-web-to-orders-api",
+      "description": "Browser calls the API",
+      "protocol": "HTTP",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "storefront-web"
+          },
+          "destination": {
+            "node": "orders-api"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "not-required",
+        "purpose": "Browser calls the API"
+      }
+    },
+    {
+      "unique-id": "orders-api-to-orders-db",
+      "description": "Persist orders",
+      "protocol": "JDBC",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "orders-api"
+          },
+          "destination": {
+            "node": "orders-db"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "required",
+        "purpose": "Persist orders"
+      }
+    },
+    {
+      "unique-id": "orders-api-to-cache",
+      "description": "Cache sessions and catalogue",
+      "protocol": "TCP",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "orders-api"
+          },
+          "destination": {
+            "node": "cache"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "required",
+        "purpose": "Cache sessions and catalogue"
+      }
+    },
+    {
+      "unique-id": "orders-api-to-payments-service",
+      "description": "Authorise payments",
+      "protocol": "mTLS",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "orders-api"
+          },
+          "destination": {
+            "node": "payments-service"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "required",
+        "purpose": "Authorise payments"
+      }
+    },
+    {
+      "unique-id": "payments-service-to-notification-worker",
+      "description": "Request customer notifications",
+      "protocol": "HTTP",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "payments-service"
+          },
+          "destination": {
+            "node": "notification-worker"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "not-required",
+        "purpose": "Request customer notifications"
+      }
+    },
+    {
+      "unique-id": "notification-worker-to-orders-api",
+      "description": "Report delivery status",
+      "protocol": "HTTPS",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "notification-worker"
+          },
+          "destination": {
+            "node": "orders-api"
+          }
+        }
+      },
+      "metadata": {
+        "encrypted-in-transit": "required",
+        "purpose": "Report delivery status"
+      }
+    },
+    {
+      "unique-id": "payments-platform-composed-of",
+      "description": "payments-platform is composed of its approved components.",
+      "relationship-type": {
+        "composed-of": {
+          "container": "payments-platform",
+          "nodes": [
+            "public-gateway",
+            "storefront-web",
+            "notification-worker",
+            "orders-api",
+            "payments-service",
+            "cache",
+            "orders-db"
+          ]
+        }
+      }
+    }
+  ]
+}

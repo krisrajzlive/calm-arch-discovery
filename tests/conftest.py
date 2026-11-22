@@ -13,12 +13,30 @@ from scanner.calm_builder import discover
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_REPO = ROOT / "fixtures" / "sample-repo"
-COMMITTED_DOC = ROOT / "architecture" / "payments-platform.calm.json"
+COMMITTED_DOC = ROOT / "architecture" / "payments-platform.actual.calm.json"
+COMMITTED_INTENDED = ROOT / "architecture" / "payments-platform.intended.calm.json"
+ARCHITECTURE_MD = FIXTURE_REPO / "docs" / "architecture" / "architecture.md"
+DRIFTED_MD = ROOT / "tests" / "data" / "architecture-drifted.md"
+# the path as the CLI receives it from the repository root (it is recorded in the document)
+ARCHITECTURE_SOURCE = "fixtures/sample-repo/docs/architecture/architecture.md"
 
 
 @pytest.fixture(scope="session")
 def fixture_repo() -> Path:
     return FIXTURE_REPO
+
+
+@pytest.fixture(scope="session")
+def intended_result() -> tuple[dict[str, Any] | None, list, list]:
+    from intent.builder import compile_markdown
+
+    return compile_markdown(ARCHITECTURE_MD, source=ARCHITECTURE_SOURCE)
+
+
+@pytest.fixture()
+def intended(intended_result: tuple) -> dict[str, Any]:
+    """A fresh deep copy of the intended document compiled from the fixture Markdown."""
+    return json.loads(json.dumps(intended_result[0]))
 
 
 @pytest.fixture(scope="session")

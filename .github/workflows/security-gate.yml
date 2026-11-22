@@ -39,7 +39,7 @@ jobs:
             --config p/python --config p/owasp-top-ten --config .semgrep/ \
             --severity ERROR --error --metrics off \
             --exclude tests/negative-controls \
-            scanner graph pipeline tests
+            scanner graph pipeline intent tests
 
   # --------------------------------------------------------------------------- SCA
   sca-trivy:
@@ -71,22 +71,41 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements.txt && pip install --no-deps -e .
 
-      - name: Rediscover the architecture from the repository
-        run: calm-discover fixtures/sample-repo -o build/payments-platform.calm.json
+      - name: Compile the architecture document (Markdown) into the intended CALM
+        run: calm-intent fixtures/sample-repo/docs/architecture/architecture.md --format github -o build/payments-platform.intended.calm.json
 
-      - name: Drift check - committed architecture must match what the repository says
+      - name: Rediscover the architecture from the code into the actual CALM
         run: |
-          diff -u architecture/payments-platform.calm.json build/payments-platform.calm.json \
-            || { echo "::error::architecture/payments-platform.calm.json is stale. Run: calm-discover fixtures/sample-repo -o architecture/payments-platform.calm.json"; exit 1; }
+          calm-discover fixtures/sample-repo -o build/payments-platform.actual.calm.json
+          calm-export-gremlin build/payments-platform.actual.calm.json -o build/payments-platform.groovy
 
-      - name: CALM gate (schema + references + control requirements + controls on every node)
-        run: calm-gate build/payments-platform.calm.json architecture/payments-platform.calm.json --format github
+      - name: Drift check - committed artifacts must match their sources
+        run: |
+          stale=0
+          for f in payments-platform.actual.calm.json payments-platform.intended.calm.json payments-platform.groovy; do
+            diff -u "architecture/$f" "build/$f" || { echo "::error::architecture/$f is stale; regenerate it (see README)"; stale=1; }
+          done
+          exit $stale
+
+      - name: CALM gate on both documents (schema + references + control requirements + controls on every node)
+        run: |
+          calm-gate build/payments-platform.actual.calm.json build/payments-platform.intended.calm.json \
+            architecture/payments-platform.actual.calm.json architecture/payments-platform.intended.calm.json --format github
+
+      - name: Conformance gate - the code must do what the architecture document says
+        run: |
+          calm-conformance --actual build/payments-platform.actual.calm.json \
+            --intended build/payments-platform.intended.calm.json --format markdown >> "$GITHUB_STEP_SUMMARY" || true
+          calm-conformance --actual build/payments-platform.actual.calm.json \
+            --intended build/payments-platform.intended.calm.json --format github
 
       - name: Independent check with the official FINOS calm-cli
         run: |
-          npx --yes "@finos/calm-cli@${CALM_CLI_VERSION}" validate \
-            -a architecture/payments-platform.calm.json \
-            -u calm-url-mapping.json --strict -f pretty
+          for f in actual intended; do
+            npx --yes "@finos/calm-cli@${CALM_CLI_VERSION}" validate \
+              -a "architecture/payments-platform.$f.calm.json" \
+              -u calm-url-mapping.json --strict -f pretty
+          done
 
   # --------------------------------------------------------------------------- tests
   test:
@@ -157,6 +176,29 @@ jobs:
         run: |
           if calm-gate tests/data/node-without-controls.calm.json; then
             echo "::error::CALM gate passed a node with no controls"; exit 1
+          fi
+
+      - name: Conformance gate must reject code that drifted from the architecture document
+        run: |
+          calm-intent tests/data/architecture-drifted.md -o build/drifted.intended.calm.json
+          if calm-conformance --actual architecture/payments-platform.actual.calm.json \
+               --intended build/drifted.intended.calm.json; then
+            echo "::error::conformance gate passed code that drifted from the document"; exit 1
+          fi
+
+      - name: Conformance gate must reject expired waivers
+        run: |
+          if calm-conformance --actual architecture/payments-platform.actual.calm.json \
+               --intended architecture/payments-platform.intended.calm.json --today 2031-01-01; then
+            echo "::error::conformance gate honoured expired waivers"; exit 1
+          fi
+
+      - name: Markdown compiler must reject a malformed architecture document
+        run: |
+          mkdir -p build
+          sed 's/| ingress |/| ingres |/' fixtures/sample-repo/docs/architecture/architecture.md > build/malformed.md
+          if calm-intent build/malformed.md; then
+            echo "::error::malformed architecture document compiled"; exit 1
           fi
 
   # --------------------------------------------------------------------------- aggregate

@@ -89,7 +89,11 @@ def _prune(props: Props) -> Props:
 
 
 def from_calm(doc: dict[str, Any]) -> GraphModel:
-    arch = str((doc.get("metadata") or {}).get("name") or "default")
+    doc_meta = doc.get("metadata") or {}
+    arch = str(doc_meta.get("name") or "default")
+    if doc_meta.get("kind") == "intended":
+        # The approved architecture is loaded beside the discovered one, never over it.
+        arch = f"{arch}-intended"
     model = GraphModel(architecture=arch)
 
     def uid(unique_id: str) -> str:
@@ -167,7 +171,9 @@ def from_calm(doc: dict[str, Any]) -> GraphModel:
                             "unique_id": rid,
                             "architecture": arch,
                             "protocol": rel.get("protocol"),
-                            "tls": bool(meta.get("tls", False)),
+                            "tls": bool(
+                                meta.get("tls", meta.get("encrypted-in-transit") == "required")
+                            ),
                             "application_protocol": meta.get("application-protocol"),
                             "port": meta.get("port"),
                             "confidence": meta.get("confidence"),

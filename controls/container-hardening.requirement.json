@@ -7,10 +7,11 @@
   "properties": {
     "status": {
       "enum": [
+        "required",
         "verified",
         "unverified"
       ],
-      "description": "verified = the scanner found evidence in the repository; unverified = required by policy but no evidence found."
+      "description": "required = declared in the architecture document (intended); verified = the scanner found evidence in the repository; unverified = required by policy but no evidence found."
     },
     "evidence": {
       "type": "array",
@@ -30,8 +31,7 @@
     }
   },
   "required": [
-    "status",
-    "evidence"
+    "status"
   ],
   "if": {
     "properties": {
@@ -44,6 +44,9 @@
     ]
   },
   "then": {
+    "required": [
+      "evidence"
+    ],
     "properties": {
       "evidence": {
         "minItems": 1

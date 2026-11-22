@@ -182,3 +182,20 @@ def test_shipped_groovy_queries_are_single_line_traversals():
     text = Path(gx.__file__).with_name("sample_queries.groovy").read_text(encoding="utf-8")
     queries = [ln for ln in text.splitlines() if ln and not ln.startswith("//")]
     assert len(queries) == 6 and all(q.startswith("g.") for q in queries)
+
+
+def test_intended_document_is_loaded_beside_the_actual_graph_never_over_it(intended, doc):
+    actual, planned = from_calm(doc), from_calm(intended)
+    assert (actual.architecture, planned.architecture) == (
+        "payments-platform",
+        "payments-platform-intended",
+    )
+    assert {v.uid for v in actual.vertices}.isdisjoint({v.uid for v in planned.vertices})
+    assert all(v.props["architecture"] == "payments-platform-intended" for v in planned.vertices)
+
+
+def test_intended_connection_encryption_maps_to_the_tls_property(intended):
+    edges = {e.uid: e for e in from_calm(intended).edges if e.type == "CONNECTS_TO"}
+    uid = "payments-platform-intended/"
+    assert edges[uid + "orders-api-to-cache"].props["tls"] is True
+    assert edges[uid + "public-gateway-to-orders-api"].props["tls"] is False
