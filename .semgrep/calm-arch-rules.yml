@@ -1,0 +1,51 @@
+rules:
+  - id: calm-arch.yaml-unsafe-load
+    languages: [python]
+    severity: ERROR
+    message: >-
+      yaml.load() without SafeLoader can construct arbitrary Python objects. Manifests come
+      from repositories we do not control; use yaml.safe_load / yaml.safe_load_all.
+    patterns:
+      - pattern: yaml.load(...)
+      - pattern-not: yaml.load(..., Loader=yaml.SafeLoader)
+      - pattern-not: yaml.load(..., Loader=yaml.CSafeLoader)
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 Software and Data Integrity Failures"
+
+  - id: calm-arch.subprocess-shell-true
+    languages: [python]
+    severity: ERROR
+    message: >-
+      subprocess with shell=True turns any interpolated value into a shell command. Pass an
+      argument list instead.
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+    metadata:
+      cwe: "CWE-78: OS Command Injection"
+      owasp: "A03:2021 Injection"
+
+  - id: calm-arch.cypher-built-from-fstring
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Cypher text built with an f-string or concatenation is injectable. Bind values with query
+      parameters ($name); labels and relationship types must come from the allow-lists in
+      graph/model.py.
+    pattern-either:
+      - pattern: $SESSION.run(f"...", ...)
+      - pattern: $SESSION.run("..." + $X, ...)
+      - pattern: $TX.run(f"...", ...)
+      - pattern: $DRIVER.execute_query(f"...", ...)
+    metadata:
+      cwe: "CWE-943: Improper Neutralization of Special Elements in Data Query Logic"
+      owasp: "A03:2021 Injection"
+
+  - id: calm-arch.requests-without-timeout
+    languages: [python]
+    severity: WARNING
+    message: Network calls without a timeout can hang a CI job indefinitely.
+    pattern-either:
+      - pattern: urllib.request.urlopen($URL)
+      - pattern: urllib.request.urlopen($URL, $DATA)
+    metadata:
+      cwe: "CWE-400: Uncontrolled Resource Consumption"

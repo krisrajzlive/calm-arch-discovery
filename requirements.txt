@@ -1,0 +1,18 @@
+# Runtime dependencies, exact pins incl. transitive ones (input to the Trivy SCA gate).
+# Regenerate: pip install <direct deps> in a clean venv, then pip freeze.
+annotated-types==0.8.0
+attrs==26.1.0
+gitdb==4.0.12
+GitPython==3.2.1
+jsonschema-specifications==2025.9.1
+jsonschema==4.26.0
+neo4j==6.4.1
+pydantic==2.14.3
+pydantic_core==2.50.4
+pytz==2026.6
+PyYAML==6.0.3
+referencing==0.37.0
+rpds-py==2026.9.1
+smmap==5.0.3
+typing-inspection==0.4.5
+typing_extensions==4.16.0

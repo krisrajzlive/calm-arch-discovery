@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/auth-required.requirement.json",
+  "title": "Authentication required",
+  "description": "Callers of the node must be authenticated.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "enum": [
+        "verified",
+        "unverified"
+      ],
+      "description": "verified = the scanner found evidence in the repository; unverified = required by policy but no evidence found."
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Repository-relative files (and detail) that evidence the control."
+    },
+    "mechanism": {
+      "enum": [
+        "oidc-jwt",
+        "mtls",
+        "password-secret",
+        "none-detected"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "evidence"
+  ],
+  "if": {
+    "properties": {
+      "status": {
+        "const": "verified"
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "then": {
+    "properties": {
+      "evidence": {
+        "minItems": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}

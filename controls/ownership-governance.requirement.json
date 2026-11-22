@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/ownership-governance.requirement.json",
+  "title": "Ownership governance",
+  "description": "An accountable owner is declared for the system (CODEOWNERS).",
+  "type": "object",
+  "properties": {
+    "status": {
+      "enum": [
+        "verified",
+        "unverified"
+      ],
+      "description": "verified = the scanner found evidence in the repository; unverified = required by policy but no evidence found."
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Repository-relative files (and detail) that evidence the control."
+    },
+    "owner": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "evidence"
+  ],
+  "if": {
+    "properties": {
+      "status": {
+        "const": "verified"
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "then": {
+    "properties": {
+      "evidence": {
+        "minItems": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}

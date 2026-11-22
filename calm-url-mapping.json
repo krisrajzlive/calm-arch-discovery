@@ -1,0 +1,8 @@
+{
+  "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/auth-required.requirement.json": "controls/auth-required.requirement.json",
+  "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/container-hardening.requirement.json": "controls/container-hardening.requirement.json",
+  "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/encryption-at-rest.requirement.json": "controls/encryption-at-rest.requirement.json",
+  "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/encryption-in-transit.requirement.json": "controls/encryption-in-transit.requirement.json",
+  "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/network-segmentation.requirement.json": "controls/network-segmentation.requirement.json",
+  "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/ownership-governance.requirement.json": "controls/ownership-governance.requirement.json"
+}

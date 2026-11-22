@@ -1,0 +1,8 @@
+# Replaces Semgrep's built-in defaults, which silently skip tests/ and would make the
+# gate-self-test scan zero files. Keep this list minimal and explicit.
+.venv/
+.venv-tools/
+node_modules/
+build/
+# third-party style fixtures are manifests, not code under test
+fixtures/

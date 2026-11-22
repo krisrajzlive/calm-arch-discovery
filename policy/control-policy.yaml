@@ -1,0 +1,28 @@
+# Control policy: which CALM controls the scanner must attach to which kind of node.
+# Controls backed by evidence in the repository are emitted as `status: verified`;
+# controls required here but not evidenced are still attached as `status: unverified`
+# so the gap is visible in the graph and reviewable in the pull request.
+requirement-base-url: https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls
+
+controls:
+  auth-required:
+    description: "{name} must only accept authenticated callers."
+  encryption-in-transit:
+    description: "All inbound connections to {name} must use TLS."
+  encryption-at-rest:
+    description: "Persistent storage for {name} must be encrypted."
+  network-segmentation:
+    description: "Traffic to {name} must be restricted by network policy."
+  container-hardening:
+    description: "{name} must run as non-root without privilege escalation."
+  ownership-governance:
+    description: "{name} must have an accountable owner declared in CODEOWNERS."
+
+# keyed by the scanner's component kind
+required-by-kind:
+  service: [auth-required, encryption-in-transit, container-hardening, network-segmentation]
+  ingress: [auth-required, encryption-in-transit]
+  database: [auth-required, encryption-in-transit, encryption-at-rest, network-segmentation]
+  webclient: [encryption-in-transit, container-hardening]
+  network: [network-segmentation]
+  system: [ownership-governance]

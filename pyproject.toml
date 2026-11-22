@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calm-arch-discovery"
+version = "0.1.0"
+description = "Discovers architecture from a Git repository, emits a FINOS CALM document, loads it into a graph (Neo4j / Neptune) and gates CI on it."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "neo4j>=5.26",
+  "pydantic>=2.7",
+  "jsonschema>=4.21",
+  "pyyaml>=6.0",
+  "gitpython>=3.1.40",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+calm-discover = "scanner.calm_builder:main"
+calm-gate = "pipeline.calm_validator:main"
+calm-load-neo4j = "graph.neo4j_loader:main"
+calm-export-gremlin = "graph.gremlin_exporter:main"
+
+[tool.setuptools.packages.find]
+include = ["scanner*", "graph*", "pipeline*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: needs a running Neo4j or Gremlin Server (docker compose up -d)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["tests/negative-controls"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]

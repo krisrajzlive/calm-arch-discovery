@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-service
+  namespace: payments
+  labels:
+    app: payments-service
+    app.kubernetes.io/part-of: payments-platform
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-service
+  template:
+    metadata:
+      labels:
+        app: payments-service
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10002
+      containers:
+        - name: payments-service
+          image: registry.example.com/payments/payments-service:1.9.0
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: NOTIFICATION_URL
+              value: http://notification-worker:9000/events
+            - name: PSP_API_BASE
+              value: https://api.psp-gateway.example.net
+            - name: JWT_JWKS_URL
+              value: https://idp.example.com/.well-known/jwks.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-service
+  namespace: payments
+spec:
+  selector:
+    app: payments-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

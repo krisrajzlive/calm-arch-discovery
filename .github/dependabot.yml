@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # keeps the SHA-pinned actions and the pinned Python dependencies (the SCA gate's input) fresh
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly

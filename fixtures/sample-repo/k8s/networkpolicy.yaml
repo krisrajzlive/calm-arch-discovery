@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: orders-db-from-orders-api
+  namespace: payments
+spec:
+  podSelector:
+    matchLabels:
+      app: orders-db
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: orders-api
+      ports:
+        - port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payments-service-from-orders-api
+  namespace: payments
+spec:
+  podSelector:
+    matchLabels:
+      app: payments-service
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: orders-api
+      ports:
+        - port: 8080

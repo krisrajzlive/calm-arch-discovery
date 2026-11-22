@@ -1,0 +1,42 @@
+name: calm-arch-discovery
+
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: calm-neo4j
+    ports:
+      - "127.0.0.1:7474:7474" # Browser
+      - "127.0.0.1:7687:7687" # Bolt
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env (see .env.example)}
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1g
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -a bolt://localhost:7687 -u neo4j -p \"$${NEO4J_AUTH#neo4j/}\" 'RETURN 1' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Optional: a TinkerPop Gremlin Server on Neptune's default port, used to execute
+  # the generated .groovy script and Gremlin queries without an AWS account.
+  #   docker compose --profile gremlin up -d gremlin
+  gremlin:
+    image: tinkerpop/gremlin-server:3.7.3
+    container_name: calm-gremlin
+    profiles: ["gremlin"]
+    # the image's entrypoint rewrites `host:` in the config with sed -i, which cannot touch a
+    # bind-mounted file, so copy it into place first
+    entrypoint:
+      - /bin/sh
+      - -c
+      - cp /calm-config/gremlin-server.yaml conf/gremlin-server-calm.yaml && exec /docker-entrypoint.sh conf/gremlin-server-calm.yaml
+    ports:
+      - "127.0.0.1:8182:8182"
+    volumes:
+      - ./graph/gremlin-server/gremlin-server.yaml:/calm-config/gremlin-server.yaml:ro
+      - ./graph/gremlin-server/tinkergraph-calm.properties:/opt/gremlin-server/conf/tinkergraph-calm.properties:ro
+
+volumes:
+  neo4j-data:

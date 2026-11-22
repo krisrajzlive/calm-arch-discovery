@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache
+  namespace: payments
+  labels:
+    app: cache
+    app.kubernetes.io/part-of: payments-platform
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache
+  template:
+    metadata:
+      labels:
+        app: cache
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache
+  namespace: payments
+spec:
+  selector:
+    app: cache
+  ports:
+    - name: redis
+      port: 6379

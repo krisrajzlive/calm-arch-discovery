@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/krisrajzlive/calm-arch-discovery/main/controls/encryption-at-rest.requirement.json",
+  "title": "Encryption at rest",
+  "description": "Persistent storage backing the node is encrypted.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "enum": [
+        "verified",
+        "unverified"
+      ],
+      "description": "verified = the scanner found evidence in the repository; unverified = required by policy but no evidence found."
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Repository-relative files (and detail) that evidence the control."
+    },
+    "storage-class": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "evidence"
+  ],
+  "if": {
+    "properties": {
+      "status": {
+        "const": "verified"
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "then": {
+    "properties": {
+      "evidence": {
+        "minItems": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}

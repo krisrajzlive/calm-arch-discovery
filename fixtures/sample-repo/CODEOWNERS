@@ -1,0 +1,7 @@
+*                               @payments-platform/maintainers
+/services/orders-api/           @payments-platform/orders-squad
+/services/payments-service/     @payments-platform/payments-core
+/services/notification-worker/  @payments-platform/messaging-guild
+/services/storefront-web/       @payments-platform/web-experience
+/k8s/orders-db.yaml             @payments-platform/data-platform
+/k8s/cache.yaml                 @payments-platform/data-platform

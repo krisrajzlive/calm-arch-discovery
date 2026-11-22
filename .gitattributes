@@ -1,0 +1,4 @@
+# Generated artefacts are compared byte-for-byte in CI (drift check): keep them LF everywhere.
+* text=auto eol=lf
+*.json text eol=lf
+*.groovy text eol=lf

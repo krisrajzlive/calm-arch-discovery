@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-worker
+  namespace: payments
+  labels:
+    app: notification-worker
+    app.kubernetes.io/part-of: payments-platform
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-worker
+  template:
+    metadata:
+      labels:
+        app: notification-worker
+    spec:
+      containers:
+        - name: notification-worker
+          image: registry.example.com/payments/notification-worker:0.8.3
+          ports:
+            - containerPort: 9000
+          env:
+            # status callback into the orders domain closes a dependency cycle
+            - name: ORDERS_API_URL
+              value: https://orders-api/callbacks
+            - name: SMTP_URL
+              value: smtps://smtp.mail-provider.example.net:465
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-worker
+  namespace: payments
+spec:
+  selector:
+    app: notification-worker
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000

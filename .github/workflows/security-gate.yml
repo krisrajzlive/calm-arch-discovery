@@ -1,0 +1,176 @@
+name: security-gate
+
+# Security as code: every check below is a job that fails the build. The final `security-gate`
+# job aggregates them and is the single status to require in branch protection.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  SEMGREP_VERSION: "1.186.0"
+  TRIVY_VERSION: "v0.76.2"
+  CALM_CLI_VERSION: "1.74.0"
+
+jobs:
+  # --------------------------------------------------------------------------- SAST
+  sast-semgrep:
+    name: SAST - Semgrep (fail on ERROR)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "semgrep==${SEMGREP_VERSION}"
+      - name: Semgrep (registry rulesets + project rules in .semgrep/)
+        run: |
+          semgrep scan \
+            --config p/python --config p/owasp-top-ten --config .semgrep/ \
+            --severity ERROR --error --metrics off \
+            --exclude tests/negative-controls \
+            scanner graph pipeline tests
+
+  # --------------------------------------------------------------------------- SCA
+  sca-trivy:
+    name: SCA - Trivy on requirements.txt (fail on HIGH/CRITICAL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: requirements.txt
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          version: ${{ env.TRIVY_VERSION }}
+
+  # --------------------------------------------------------------------------- CALM gate
+  calm-gate:
+    name: CALM - architecture gate (every node needs controls)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: pip install -r requirements.txt && pip install --no-deps -e .
+
+      - name: Rediscover the architecture from the repository
+        run: calm-discover fixtures/sample-repo -o build/payments-platform.calm.json
+
+      - name: Drift check - committed architecture must match what the repository says
+        run: |
+          diff -u architecture/payments-platform.calm.json build/payments-platform.calm.json \
+            || { echo "::error::architecture/payments-platform.calm.json is stale. Run: calm-discover fixtures/sample-repo -o architecture/payments-platform.calm.json"; exit 1; }
+
+      - name: CALM gate (schema + references + control requirements + controls on every node)
+        run: calm-gate build/payments-platform.calm.json architecture/payments-platform.calm.json --format github
+
+      - name: Independent check with the official FINOS calm-cli
+        run: |
+          npx --yes "@finos/calm-cli@${CALM_CLI_VERSION}" validate \
+            -a architecture/payments-platform.calm.json \
+            -u calm-url-mapping.json --strict -f pretty
+
+  # --------------------------------------------------------------------------- tests
+  test:
+    name: Lint, unit and Neo4j integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt && pip install --no-deps -e .
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -m "not integration"
+      - name: Start Neo4j with a throwaway password
+        run: |
+          pw="$(openssl rand -hex 16)"
+          echo "::add-mask::$pw"
+          echo "NEO4J_PASSWORD=$pw" >> "$GITHUB_ENV"
+          docker run -d --name neo4j -p 127.0.0.1:7687:7687 -e NEO4J_AUTH="neo4j/$pw" neo4j:5.26-community
+          for _ in $(seq 1 40); do
+            docker exec neo4j cypher-shell -u neo4j -p "$pw" 'RETURN 1' >/dev/null 2>&1 && exit 0
+            sleep 3
+          done
+          docker logs neo4j; exit 1
+      - name: Integration tests (loader + Cypher queries against real Neo4j)
+        env:
+          REQUIRE_INTEGRATION: "1"
+        run: pytest -m integration -k neo4j
+
+  # --------------------------------------------------------------------------- negative controls
+  gate-self-test:
+    name: Negative controls - each gate must block known-bad input
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt && pip install --no-deps -e .
+      - run: pipx install "semgrep==${SEMGREP_VERSION}"
+
+      - name: SAST gate must reject insecure code
+        run: |
+          if semgrep scan --config p/python --config .semgrep/ --severity ERROR --error \
+               --metrics off tests/negative-controls; then
+            echo "::error::SAST gate passed on code it must reject"; exit 1
+          fi
+
+      - name: SCA gate must reject known-vulnerable pins
+        id: sca-negative
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: tests/negative-controls/requirements.txt
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          version: ${{ env.TRIVY_VERSION }}
+      - name: Assert the SCA gate blocked
+        if: steps.sca-negative.outcome != 'failure'
+        run: echo "::error::SCA gate passed on vulnerable dependencies"; exit 1
+
+      - name: CALM gate must reject a node without controls
+        run: |
+          if calm-gate tests/data/node-without-controls.calm.json; then
+            echo "::error::CALM gate passed a node with no controls"; exit 1
+          fi
+
+  # --------------------------------------------------------------------------- aggregate
+  security-gate:
+    name: security-gate
+    if: always()
+    needs: [sast-semgrep, sca-trivy, calm-gate, test, gate-self-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gate to have passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "gate results: $RESULTS"
+          for r in $RESULTS; do
+            [ "$r" = "success" ] || { echo "::error::at least one gate did not pass"; exit 1; }
+          done

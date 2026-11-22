@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storefront-web
+  namespace: payments
+  labels:
+    app: storefront-web
+    app.kubernetes.io/part-of: payments-platform
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: storefront-web
+  template:
+    metadata:
+      labels:
+        app: storefront-web
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+      containers:
+        - name: nginx
+          image: registry.example.com/payments/storefront-web:3.2.0
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          env:
+            - name: ORDERS_API_URL
+              value: http://orders-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: storefront-web
+  namespace: payments
+spec:
+  selector:
+    app: storefront-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

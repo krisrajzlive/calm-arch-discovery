@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-api
+  namespace: payments
+  labels:
+    app: orders-api
+    app.kubernetes.io/part-of: payments-platform
+    environment: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: orders-api
+  template:
+    metadata:
+      labels:
+        app: orders-api
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: orders-api
+          image: registry.example.com/payments/orders-api:2.4.1
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: ORDERS_DB_URL
+              value: postgresql://orders_app@orders-db:5432/orders?sslmode=require
+            - name: ORDERS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: orders-db-credentials
+                  key: password
+            - name: CACHE_URL
+              value: redis://cache:6379/0
+            - name: PAYMENTS_URL
+              value: http://payments-service:8080
+            - name: OIDC_ISSUER_URL
+              value: https://idp.example.com/realms/retail
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-api
+  namespace: payments
+spec:
+  selector:
+    app: orders-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

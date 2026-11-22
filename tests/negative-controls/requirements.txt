@@ -1,0 +1,4 @@
+# Known-vulnerable pins. The SCA gate MUST fail on this file (see gate-self-test in security-gate.yml).
+pyyaml==5.3.1
+jinja2==2.10
+urllib3==1.25.8
